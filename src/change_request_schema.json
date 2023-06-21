@@ -1,0 +1,106 @@
+[
+    {
+        "@base": "terminusdb:///data/",
+        "@schema": "terminusdb:///schema#",
+        "@type": "@context"
+    },
+    {
+        "@id": "Indexing_Status",
+        "@type": "Enum",
+        "@value": [
+            "Complete",
+            "Error",
+            "Sent",
+            "Progress",
+            "Assigned",
+            "Create"
+          ]
+    },
+    {
+        "@id": "ChangeRequest",
+        "@type": "Class",
+        "creation_time": "xsd:decimal",
+        "creator": "xsd:string",
+        "creator_email": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        },
+        "merge_commit_id": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        },
+        "messages": {
+            "@class": "Message",
+            "@type": "Set"
+        },
+        "name": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        },
+        "origin_commit_id": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        },
+        "origin_database": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        },
+        "original_branch": "xsd:string",
+        "status": "Status",
+        "tracking_branch": "xsd:string",
+        "indexing_info": {
+            "@class": "Indexed_commit",
+            "@type": "Set"
+        }
+    },
+    {
+        "@id": "Message",
+        "@key": {
+            "@type": "Random"
+        },
+        "@subdocument": [],
+        "@type": "Class",
+        "author": "xsd:string",
+        "text": "xsd:string",
+        "timestamp": "xsd:decimal"
+    },
+    {
+        "@id": "Indexed_commit",
+        "@key": {
+            "@type": "Lexical",
+            "@fields": [
+                "change_request_commit_id"
+            ]
+        },
+        "@type": "Class",
+        "change_request_commit_id": "xsd:string",
+        "indexed_at": "xsd:decimal",
+        "indexing_status": "Indexing_Status",
+        "searchable_branch_commit_id": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        },
+        "searchable_branch_name": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        },
+        "task_id": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        },
+        "error_message": {
+            "@class": "xsd:string",
+            "@type": "Optional"
+        }
+    },
+    {
+        "@id": "Status",
+        "@type": "Enum",
+        "@value":[
+            "Open",
+            "Merged",
+            "Rejected",
+            "Submitted"
+        ]
+    }
+]
