@@ -5,9 +5,10 @@ import * as typeDef from "./typeDef"
 import {ApiError} from "./ApiError"
 const server : string = process.env.SERVER_ENDPOINT || "http://127.0.0.1:6363"
 
-//const IndexClient = require('../index/IndexClient')
+import * as IndexClient from './IndexClient'
 
 import dbSchema from '../../change_request_schema.json'
+import { doc } from "@terminusdb/terminusdb-client/dist/typescript/lib/woql"
 //import {v4 as uuidv4} from 'uuid';
 const { v4: uuidv4 } = require('uuid');
 
@@ -35,7 +36,6 @@ const logger =  {
      console.log('WARNING', dd.toISOString(), message)
   }
 }
-
 class ChangeRequestDB {
   client: WOQLClient;
   request : Request
@@ -45,6 +45,8 @@ class ChangeRequestDB {
   dbName : string | undefined
   changeRequestDbName:  string | undefined
   logger : Object 
+  endStatus:any = { Assigned: true, Error: true }
+  availableStatus:any = { Assigned: true, Error: true, Progress: true }
 
   constructor(req : Request) {
     this.request = req
@@ -236,7 +238,7 @@ class ChangeRequestDB {
   
   
   // check if there is an old CR db
-  async updateDocumentFixSchema(changeRequestDoc:typeDef.ChangeReqDoc, message = 'add new doc') {
+  async updateDocumentFixSchema(changeRequestDoc:typeDef.ChangeReqDoc|typeDef.IndexedCommit, message = 'add new doc') {
     let docResult
     try {
       const putDocParams : DocParamsPut = { create: true }
@@ -286,7 +288,7 @@ class ChangeRequestDB {
   
   
   // await this.assignCommit(`${userDatabase.organization()}/${userDatabase.db()}`, lastCommitCRBRanch, 'Complete', requestDoc.original_branch, lastCommitAfterMerge)
-  async changeRequestStatus (changeIdHash:string, status:string, message:string) {
+  async changeRequestStatus (changeIdHash:string, status:string, message:string, apiKey?:string) {
     const changeId = `ChangeRequest/${changeIdHash}`
     const requestDoc = await this.client.getDocument({ id: changeId })
     let updateMessage = `Update document changeRequest ${changeIdHash}`
@@ -306,20 +308,10 @@ class ChangeRequestDB {
         // when I merge in main I lost all the branch commit, So I'll have a new commit from main that is the merge one
         await userDatabase.apply(requestDoc.original_branch, requestDoc.tracking_branch, updateMessage, true)
         // I have to get the new commit from the original branch
-        /*if (apiKey) {
-          const lastCommitAfterMerge = await this.getLastCommitId(userDatabase, requestDoc.original_branch)
-          doc.change_request_commit_id = lastCommitCRBRanch
-          doc.indexed_at = Date.now()
-          doc.searchable_branch_name = requestDoc.original_branch
-          doc.searchable_branch_commit_id = lastCommitAfterMerge
-          doc.indexing_status = 'Create'
-          if (!requestDoc.indexing_info) requestDoc.indexing_info = []
-          requestDoc.indexing_info.push(doc)
-          updateMessage = `Add Indexing information for changeRequest ${changeIdHash} commit ${lastCommitCRBRanch}`
-          const runResult = await this.runChangeRequestIndex(`${userDatabase.organization()}/${userDatabase.db()}`, lastCommitCRBRanch,apiKey)
-          doc.indexing_status = runResult.status
-          if (runResult.task_id)doc.task_id = runResult.task_id
-        }*/
+        if (apiKey) {
+        // I'm create the indexing info doc 
+          await this.createIndexInfoDoc(userDatabase,requestDoc,lastCommitCRBRanch, apiKey)
+        }
       } else {
         throw new Error(`I can not merge a change request with ${requestDoc.status} status`)
       }
@@ -350,17 +342,114 @@ class ChangeRequestDB {
     const userDatabase = this.connectWithCurrentUser()
     return userDatabase.getVersionDiff(originalBranch, trackingBranch, undefined, options)
   }
-}
 
+  //apikey method
 
+  async createIndexInfoDoc(userDatabase:WOQLClient, requestDoc:typeDef.ChangeReqDoc,lastCommitCRBRanch:string,apiKey:string){
+      const lastCommitAfterMerge = await this.getLastCommitId(userDatabase, requestDoc.original_branch)
+      const doc : typeDef.IndexedCommit = { "@type": "Indexed_commit",
+                  change_request_commit_id : lastCommitCRBRanch,
+                  indexed_at :   Date.now(),
+                  indexing_status : 'Create'}
+      doc.searchable_branch_name = requestDoc.original_branch
+      doc.searchable_branch_commit_id = lastCommitAfterMerge
+      if (!requestDoc.indexing_info) requestDoc.indexing_info = []
+      requestDoc.indexing_info.push(doc)
+      // I need to review maybe I can run this with update status
+      const runResult = await this.runChangeRequestIndex(`${userDatabase.organization()}/${userDatabase.db()}`, lastCommitCRBRanch,apiKey)
+      doc.indexing_status = runResult.status
+      if (runResult.task_id)doc.task_id = runResult.task_id
+      return requestDoc
+  }
 
-// VECTORLINK_EMBEDDING_API_KEY
+  async assignCommit(domain:string, commit:string, originalBranchLastCommit:string, apiKey?:string) {
+    try {
+      if(!apiKey)return { status: 'Error', error_message: "Error, I can not find and OPENAI API KEY" }
+      await IndexClient.assignCommit(this.logger, domain, commit, originalBranchLastCommit, apiKey)
+      return { status: 'Assigned' }
+    } catch (err:any) {
+      if (err.response && err.response.data === 'target commit already has an index') {
+        return { status: 'Assigned' }
+      } else {
+        //this.logger.error(`I can not assign the indexing commit ${commit} to ${originalBranchLastCommit}`)
+        return { status: 'Error', error_message: err.message }
+      }
+    }
+  }
 
-/*const availableStatus = { Assigned: true, Error: true, Progress: true }
-ChangeRequestDB.prototype.getLastCommitsIndexed = async function (limit = 1, status = null) {
+  async checkStatus(taskId:string){
+    try {
+      const progress = await IndexClient.checkStatus(this.logger, taskId)
+      if (progress.data < 1) {
+        return { status: 'Progress' }
+      }
+      return { status: 'Complete' }
+    } catch (err:any) {
+      const message = err.response && err.response.data ? err.response.data : err.message
+      return { status: 'Error', error_message: message }
+    }
+  }  
+
+  async indexingCheckStatus (commit:string, apiKey?:string){
+    const fullId = `Indexed_commit/${commit}`
+    const doc = await this.client.getDocument({ id: fullId })
+    const taskId = doc.task_id
+    if (this.endStatus[doc.indexing_status]) return doc
+    const domain = `${this.orgName}/${this.dbName}`
+    const statusObj = await this.checkStatus(taskId)// await IndexClient.checkStatus(this.logger, taskId)
+    switch (statusObj.status) {
+      case 'Progress':
+        doc.indexing_status = 'Progress'
+        await this.client.updateDocument(doc)
+        break
+      case 'Complete':
+        // eslint-disable-next-line no-case-declarations
+        const result = await this.assignCommit(domain, commit, doc.searchable_branch_commit_id, apiKey)
+        doc.indexing_status = result.status
+        if (result.error_message)doc.error_message = result.error_message
+        await this.client.updateDocument(doc)
+        break
+      case 'Error':
+        doc.indexing_status = 'Error'
+        doc.error_message = statusObj.error_message
+        await this.client.updateDocument(doc)
+        break
+    }
+    return doc
+  }
+
+  async updateIndexingInfo (commit:string, status:typeDef.IndexingStatus, apiKey?:string) {
+    const fullId = `Indexed_commit/${commit}`
+    const doc:typeDef.IndexedCommit = await this.client.getDocument({ id: fullId })
+    if (status === 'Sent' && apiKey) {
+      const domain = `${this.orgName}/${this.dbName}`
+      const result = await this.runChangeRequestIndex(domain, commit, apiKey)
+      doc.indexing_status = result.status
+      // remove the old task_id
+      if (doc.task_id) delete doc.task_id
+      // set the new one if exists
+      if (result.task_id) doc.task_id = result.task_id
+      if (result.error_message)doc.error_message = result.error_message
+    } else {
+      doc.indexing_status = status
+    }
+    return this.updateDocumentFixSchema(doc)
+  }
+
+  async runChangeRequestIndex(domain:string, commit:string, apiKey:string): Promise<typeDef.RunIndexResultObj> {
+    try {
+      const ref = await IndexClient.indexDatabase(this.logger, domain, commit, apiKey)
+      return { status: 'Progress', task_id: ref.data }
+    } catch (err:any) {
+      const message = err.response && err.response.data ? err.response.data : err.message
+      return { status: 'Error', error_message: message }
+    }
+  }
+
+ async getLastCommitsIndexed (limit = 1, status?:string) {
   try {
     const WOQL = TerminusClient.WOQL
-    const statusVar = availableStatus[status] ? `@schema:Indexing_Status/${status}` : 'v:indexing_status'
+    const statusVar = status && this.availableStatus[status] ? `@schema:Indexing_Status/${status}` : 'v:indexing_status'
     const query = WOQL.limit(limit).order_by(['v:time', 'desc']).and(
       WOQL.triple('v:index', 'rdf:type', '@schema:Indexed_commit'),
       WOQL.triple('v:index', '@schema:change_request_commit_id', 'v:commit_id'),
@@ -376,7 +465,7 @@ ChangeRequestDB.prototype.getLastCommitsIndexed = async function (limit = 1, sta
     )
     const result = await this.client.query(query)
     return result
-  } catch (err) {
+  } catch (err:any) {
     // the change_request_db does not esist already
     if (err.data && err.data && err.data['api:error'] && err.data['api:error']['@type'] === 'api:UnresolvableAbsoluteDescriptor') {
       return false
@@ -384,92 +473,6 @@ ChangeRequestDB.prototype.getLastCommitsIndexed = async function (limit = 1, sta
     throw err
   }
 }
-
-ChangeRequestDB.prototype.getIndexedActions = async function () {
-  try {
-    const WOQL = TerminusClient.WOQL
-    const query = WOQL.limit(1).order_by(['v:time', 'desc']).triple('v:a', 'rdf:type', '@schema:Indexed_commit')
-      .triple('v:a', '@schema:searchable_branch_name', WOQL.string('main'))
-      .triple('v:a', '@schema:searchable_branch_commit_id', 'v:commit')
-      .triple('v:a', '@schema:indexed_at', 'v:time')
-    const result = await this.client.query(query)
-    let commit = false
-    if (result.bindings.length > 0) {
-      commit = result.bindings[0].commit['@value']
-    }
-    return commit
-  } catch (err) {
-    // the change_request_db does not esist already
-    if (err.data && err.data && err.data['api:error'] && err.data['api:error']['@type'] === 'api:UnresolvableAbsoluteDescriptor') {
-      return false
-    }
-    throw err
-  }
-}*/
-
-
-
-
-
-
-
-
-
-/*const doc = {
-  '@type': 'Indexed_commit'
 }
-
-ChangeRequestDB.prototype.updateIndexingInfo = async function (commit, status) {
-  const fullId = `Indexed_commit/${commit}`
-  const doc = await this.client.getDocument({ id: fullId })
-  doc.indexing_status = status
-  await this.client.updateDocument(doc)
-}
-
-const endStatus = { Assigned: true, Error: true }
-
-ChangeRequestDB.prototype.indexingCheckStatus = async function (commit, apiKey) {
-  const fullId = `Indexed_commit/${commit}`
-  const doc = await this.client.getDocument({ id: fullId })
-  const taskId = doc.task_id
-  if (endStatus[doc.indexing_status]) return doc
-  const progress = await IndexClient.checkStatus(this.logger, taskId)
-  if (progress.data < 1) {
-    doc.indexing_status = 'Progress'
-    await this.client.updateDocument(doc)
-  } else {
-    const domain = `${this.orgName}/${this.dbName}`
-    const result = await this.assignCommit(domain, commit, doc.searchable_branch_commit_id, apiKey)
-    doc.indexing_status = result.status
-    if (result.error_message)doc.error_message = result.error_message
-    await this.client.updateDocument(doc)
-  }
-  return doc
-}
-
-ChangeRequestDB.prototype.assignCommit = async function (domain, commit, originalBranchLastCommit, apiKey) {
-  try {
-    await IndexClient.assignCommit(this.logger, domain, commit, originalBranchLastCommit, apiKey)
-    return { status: 'Assigned' }
-  } catch (err) {
-    if (err.response && err.response.data === 'target commit already has an index') {
-      return { status: 'Assigned' }
-    } else {
-      this.logger.error(`I can not assign the indexing commit ${commit} to ${originalBranchLastCommit}`)
-      return { status: 'Error', error_message: err.message }
-    }
-  }
-}
-
-// index change request
-// I can check if the index for that commit exists and not run again
-ChangeRequestDB.prototype.runChangeRequestIndex = async function (domain, commit, apiKey) {
-  try {
-    const ref = await IndexClient.indexDatabase(this.request.context.logger, domain, commit, apiKey)
-    return { status: 'Progress', task_id: ref.data }
-  } catch (err) {
-    return { status: 'Error', task_id: null }
-  }
-}*/
 
 export default ChangeRequestDB

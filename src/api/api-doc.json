@@ -31,6 +31,17 @@
             "message"
          ]
       },
+      "SearchIndexText":{
+         "type":"object",
+         "properties":{
+            "search":{
+               "type":"string"
+            }
+         },
+         "required":[
+            "search"
+         ]
+      },
       "PostChangeRequest":{
          "type":"object",
          "properties":{
@@ -85,7 +96,16 @@
           "origin_database"
        ]
     },
-      "ChangeRequest":{
+    "IndexedCommits":{
+      "type":"object",
+      "properties":{  
+         "@type":{ "type":"string"},
+         "api:status":{ "type":"string"},
+         "api:variable_names": { "type":"array"},
+         "bindings": {"type":"array"}
+      }
+   },
+   "ChangeRequest":{
          "type":"object",
          "properties":{
             "id":{
@@ -138,6 +158,25 @@
           "diff"
        ]
     },
+    "OpenAIStatus":{
+      "type":"object",
+      "properties":{
+         "key":{
+            "type":"string"
+         }
+      }
+   },
+    "UpdateIndexedCommitDocument":{
+      "type":"object",
+         "properties":{
+            "status":{
+               "type":"string"
+            }
+         },
+         "required":[
+            "status"
+         ]
+    },
     "TablesConfig":{
       "type":"object",
       "properties":{
@@ -154,8 +193,37 @@
             "type":"object"
          }
       }
-   }
+   },
+   "CheckIndexedCommitTask":{
+      "type":"object",
+      "properties":{
+         "@id":{
+            "type":"string"
+         },
+      "change_request_commit_id": {
+            "type":"string"
+      },
+      "indexed_at": {
+         "type":"number"
+      },
+      "indexing_status": {
+         "type":"string"
+      },
+      "searchable_branch_commit_id":{
+         "type":"string"
+         },
+      "searchable_branch_name":{
+         "type":"string"
+         },
+      "task_id":{
+         "type":"string"
+         },
+      "error_message":{
+         "type":"string"
+         }
+      }
  
+      }
    },
    
    "paths":{

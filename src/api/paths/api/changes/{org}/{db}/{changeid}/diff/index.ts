@@ -18,7 +18,7 @@ import * as typeDef from "../../../../../../../core/typeDef"
     }
     
     GET.apiDoc = {
-      summary: "to view all the changes between the main branch and the given change request ",
+      summary: "to view all the changes between the original branch and the given change request ",
       operationId: "getChangeRequestsDiff",
       parameters: [
         {
@@ -52,28 +52,3 @@ import * as typeDef from "../../../../../../../core/typeDef"
         },
       },
     };
-  
-    /*POST.apiDoc = {
-      summary: "Create Change Request.",
-      operationId: "createChangeRequest",
-      consumes: ["application/json"],
-      parameters: [
-        {
-          in: "body",
-          name: "change request",
-          schema: {
-            $ref: "#/definitions/PostChangeRequest",
-          },
-        },
-      ],
-      responses: {
-        201: {
-          description: "Created",
-        },
-      },
-    };*/
-
-    //return operations;
- // };
-
-  //export default operation

@@ -26,7 +26,7 @@ import * as typeDef from "../../../../../../../core/typeDef"
   
     
     PUT.apiDoc = {
-      summary: "to rebase the current change request to the main branch",
+      summary: "Rebase the current change request to the original branch",
       operationId: "rebaseChangeRequest",
       parameters: [
         {
@@ -50,13 +50,7 @@ import * as typeDef from "../../../../../../../core/typeDef"
       ],
       responses: {
         200: {
-          description: "List of document diff.",
-          schema: {
-            type: "array",
-            items:{
-              "type": "object"
-            }
-          },
+          description: "Return the change request document",
         },
       },
     };

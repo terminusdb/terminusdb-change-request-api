@@ -25,6 +25,22 @@ export type ChangeReqDoc = {
     origin_commit_id: string,
     creation_time : number,
     messages: MessageObj[]
+    indexing_info?:IndexedCommit[]
+}
+
+export type RunIndexResultObj = {status:IndexingStatus,task_id?:string,error_message?:string}
+
+export type IndexingStatus =  "Complete" | "Error" | "Sent" | "Progress"| "Assigned"|"Create"|"Close"
+
+export type IndexedCommit={
+    "@type": "Indexed_commit",
+    "change_request_commit_id": string,
+    "indexed_at": number,
+    "indexing_status": IndexingStatus,
+    "searchable_branch_commit_id"?:string,
+    "searchable_branch_name"?:string,
+    "task_id"?:string,
+    "error_message"?:string
 }
 
 export type AdvancedSearchField = {

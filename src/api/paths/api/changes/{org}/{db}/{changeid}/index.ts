@@ -25,7 +25,8 @@ import ChangeRequestDB from "../../../../../../core/ChangeRequestDB";
       try{
         const crId = req.params.changeid
         const changeR = new ChangeRequestDB(req)
-        await changeR.changeRequestStatus(crId,req.body.status,req.body.message)
+        const apiKey = process.env.OPENAI_KEY 
+        await changeR.changeRequestStatus(crId,req.body.status,req.body.message,apiKey)
         res.status(200).send({message:"The change request status has been update"});
       }catch(err:any){
          console.log(err.message)
@@ -41,7 +42,7 @@ import ChangeRequestDB from "../../../../../../core/ChangeRequestDB";
     }
   
     GET.apiDoc = {
-      summary: "Fetch Change requests.",
+      summary: "Get Change request Document by id.",
       operationId: "getChangeRequest",
       parameters: [
         {
@@ -65,7 +66,7 @@ import ChangeRequestDB from "../../../../../../core/ChangeRequestDB";
       ],
       responses: {
         200: {
-          description: "List of change requests.",
+          description: "Return the Change Request Document.",
           schema: {
             type: "object",
             items: {
@@ -77,7 +78,7 @@ import ChangeRequestDB from "../../../../../../core/ChangeRequestDB";
     };
   
     PUT.apiDoc = {
-      summary: "Update Change Request.",
+      summary: "Update the Change Request Document.",
       operationId: "updateChangeRequest",
       parameters: [
         {
@@ -114,7 +115,7 @@ import ChangeRequestDB from "../../../../../../core/ChangeRequestDB";
     };
   
     DELETE.apiDoc = {
-      summary: "Delete Change Request.",
+      summary: "Delete Change Request by id.",
       operationId: "deleteChangeRequest",
       consumes: ["application/json"],
       parameters: [
@@ -139,7 +140,7 @@ import ChangeRequestDB from "../../../../../../core/ChangeRequestDB";
       ],
       responses: {
         200: {
-          description: "Delete",
+          description: "Delete the Change Request Document",
         },
       },
     };

@@ -38,7 +38,7 @@ import ChangeRequestDB from "../../../../../core/ChangeRequestDB";
     }
     
     GET.apiDoc = {
-      summary: "Fetch Change requests.",
+      summary: "Fetch Change requests list.",
       operationId: "getChangeRequests",
       parameters: [
         {
