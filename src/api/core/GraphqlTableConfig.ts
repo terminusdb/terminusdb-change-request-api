@@ -1,22 +1,11 @@
-//import gql from 'graphql-tag'
-import { ApolloClient, InMemoryCache, gql, concat,HttpLink,ApolloLink } from '@apollo/client/core';
-//import gql from "graphql-tag";
-//const { ApolloClient, InMemoryCache, concat,HttpLink,ApolloLink } = Apollo
 
-//import {ApolloClient} from 'apollo-client'
-//import fetch from 'cross-fetch'
-//import  apolloHttpLink from 'apollo-link-http'
-//import  apolloLinkContext from 'apollo-link-context'
-//import  apolloInMemoryCache from 'apollo-cache-inmemory'
+import { ApolloClient, InMemoryCache, gql, concat,HttpLink,ApolloLink } from '@apollo/client/core';
 import { Request } from "express"
-//import advancedSearchMatchType from "./advancedSearchMatchType.json"
 import  TerminusClient from '@terminusdb/terminusdb-client'
 import { AdvancedSearchField } from './typeDef'
-// import  classDocuments  from "./ClassDocuments.js";*/
 const endpoint = process.env.SERVER_ENDPOINT || ""
 const key = process.env.USER_KEY || ""
 const user = process.env.USER_NAME || ""
-//https://www.apptension.com/blog-posts/how-to-use-typescript-record-utility-type#:~:text=The%20TypeScript%20Record%20type%20mostly,the%20shape%20of%20an%20object.
 
 type FieldObj = {kind:string,type:AdvancedKeyType,name:string}
 
@@ -200,26 +189,6 @@ class GraphqlTableConfig {
   async getSchema (organization:string, dbname:string, branchid:string) {
     const woqlClient = new TerminusClient.WOQLClient(endpoint, { user: this.user, key: this.password, organization:organization, db: dbname })
     const userPassEnc = btoa(`${this.user}:${this.password}`)
-   /* const authLink = apolloLinkContext.setContext((_, { headers }) => {
-      // get the authentication token from local storage if it exists
-      // return the headers to the context so httpLink can read them
-      
-      return {
-        headers: {
-          ...headers,
-          authorization: `Basic ${userPassEnc}`
-        }
-      }
-    })
-      const httpLink = apolloHttpLink.createHttpLink({
-      uri: url,
-      fetch: fetch
-    })
-  
-    const client = new ApolloClient({
-      link: authLink.concat(httpLink),
-      cache: new apolloInMemoryCache.InMemoryCache()
-    })*/
     woqlClient.checkout(branchid)
     const terminusdbURL = woqlClient.connectionConfig.branchBase('graphql')
   
@@ -238,14 +207,11 @@ class GraphqlTableConfig {
     });
 
     const value = concat(authMiddleware, httpLink)
-
     const client = new ApolloClient({
         cache:cache,
         link: value,       
     });
   
-  
-     // try {
     const result = await client.query({ query })
     const schemaDoc = await woqlClient.getDocument({ graph_type: 'schema', as_list: true })
     const tableConfig = this.formatSchema(result, schemaDoc)
@@ -313,14 +279,15 @@ class GraphqlTableConfig {
       const itemMatch = schemaDoc.find((doc:any) => doc['@id'] === name ||
                           `${doc['@id']}_Filter` === name || `${doc['@id']}_Ordering` === name)
       if (itemMatch) {
+        console.log("TYPE NAME",name , kind)
         const ordering = itemMatch['@metadata'] && itemMatch['@metadata'].order_by ? { order_by: itemMatch['@metadata'].order_by } : {}
         typesObj[name] = { type: kind, ...ordering }
-  
-        let fieldsObj = {}
+        // to be review
+        let fieldsObj:any = {}
         if (fields) {
           fields.forEach(field => {
             if (field.name.startsWith('_') === false && field.args && field.args.length === 0) {
-              fieldsObj = {[field.name] : this.getType(field)}
+              fieldsObj[field.name] = this.getType(field)
             }
           })
         

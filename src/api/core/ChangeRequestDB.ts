@@ -1,5 +1,5 @@
 import TerminusClient , {WOQLClient,WOQL} from "@terminusdb/terminusdb-client"
-import { DbDetails, DocParamsGet, DocParamsPut } from "@terminusdb/terminusdb-client/dist/typescript/lib/typedef"
+import { DbDetails, DocParamsGet, DocParamsPut,DiffObject } from "@terminusdb/terminusdb-client/dist/typescript/lib/typedef"
 import { Request } from "express"
 import * as typeDef from "./typeDef"
 import {ApiError} from "./ApiError"
@@ -331,7 +331,7 @@ class ChangeRequestDB {
     if (changeRequest.status === 'Merged' && changeRequest.merge_commit_id) {
       originalBranch = changeRequest.merge_commit_id
     }
-    const options = {
+    const options : DiffObject = {
       start: start,
       count: count,
       keep: {
@@ -340,7 +340,7 @@ class ChangeRequestDB {
       }
     }
     const userDatabase = this.connectWithCurrentUser()
-    return userDatabase.getVersionDiff(originalBranch, trackingBranch, undefined, options)
+    return userDatabase.getVersionDiff(originalBranch, trackingBranch, undefined,options)
   }
 
   //apikey method
