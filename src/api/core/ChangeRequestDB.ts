@@ -343,6 +343,16 @@ class ChangeRequestDB {
     return userDatabase.getVersionDiff(originalBranch, trackingBranch, undefined,options)
   }
 
+  async addMessage (changeIdHash:string, message:string) {
+    const changeId = `ChangeRequest/${changeIdHash}`
+    const requestDoc = await this.client.getDocument({ id: changeId })
+    const updateMessage = message || 'No new message'
+    const messageObj = { author: this.user || '', '@type': 'Message', text: updateMessage, timestamp: Date.now() }
+    requestDoc.messages.push(messageObj)
+    await this.updateDocumentFixSchema(requestDoc, updateMessage)
+    return requestDoc
+  }
+
   //apikey method
 
   async createIndexInfoDoc(userDatabase:WOQLClient, requestDoc:typeDef.ChangeReqDoc,lastCommitCRBRanch:string,apiKey:string){

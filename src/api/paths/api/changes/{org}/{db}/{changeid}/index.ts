@@ -26,8 +26,8 @@ import ChangeRequestDB from "../../../../../../core/ChangeRequestDB";
         const crId = req.params.changeid
         const changeR = new ChangeRequestDB(req)
         const apiKey = process.env.OPENAI_KEY 
-        await changeR.changeRequestStatus(crId,req.body.status,req.body.message,apiKey)
-        res.status(200).send({message:"The change request status has been update"});
+        const changeDoc = await changeR.changeRequestStatus(crId,req.body.status,req.body.message,apiKey)
+        res.status(200).send(changeDoc);
       }catch(err:any){
          console.log(err.message)
          const status = err.status || 500

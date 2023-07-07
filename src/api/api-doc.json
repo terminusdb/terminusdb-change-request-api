@@ -194,6 +194,14 @@
          }
       }
    },
+   "ChangeRequestActivationStatus":{
+      "type":"object",
+      "properties":{
+         "isActive":{
+            "type":"boolean"
+         }
+      }
+   },
    "CheckIndexedCommitTask":{
       "type":"object",
       "properties":{

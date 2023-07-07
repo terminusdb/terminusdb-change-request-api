@@ -186,10 +186,14 @@ class GraphqlTableConfig {
     // every dataproduct has the related change_request database
   }
 
-  async getSchema (organization:string, dbname:string, branchid:string) {
+  async getSchema (organization:string, dbname:string, type:string, typeid:string) {
     const woqlClient = new TerminusClient.WOQLClient(endpoint, { user: this.user, key: this.password, organization:organization, db: dbname })
     const userPassEnc = btoa(`${this.user}:${this.password}`)
-    woqlClient.checkout(branchid)
+    if(type==="branch"){
+      woqlClient.checkout(typeid)
+    }else{
+      woqlClient.ref(typeid)
+    }
     const terminusdbURL = woqlClient.connectionConfig.branchBase('graphql')
   
     const httpLink = new HttpLink({ uri: terminusdbURL });
@@ -238,19 +242,27 @@ class GraphqlTableConfig {
   }
 
   advSearchFilterFormatter (typesObj:any, fieldKey:string, fieldTypeValue:AdvancedKeyType, isList:boolean) {
-    // const advancedSearchObj = {}
-    let advField:AdvancedSearchField = advancedSearchMatchType[fieldTypeValue]
-    if (advField !== undefined) {
-      advField = JSON.parse(JSON.stringify(advField))
-      advField.label = fieldKey
-    } else if (typesObj[fieldTypeValue] && typesObj[fieldTypeValue].type === 'ENUM') {
-      advField = JSON.parse(JSON.stringify(advancedSearchMatchType.ENUM))
-      advField.label = fieldKey
-      advField.fieldSettings = {listValues : typesObj[fieldTypeValue].values}
+    try{
+      if(fieldKey==="homeworld"){
+        console.log("stop")
+
+      }
+      let advField:AdvancedSearchField = advancedSearchMatchType[fieldTypeValue] || {}
+      if (advField !== undefined) {
+        advField = JSON.parse(JSON.stringify(advField))
+        advField.label = fieldKey
+      } else if (typesObj[fieldTypeValue] && typesObj[fieldTypeValue].type === 'ENUM') {
+        advField = JSON.parse(JSON.stringify(advancedSearchMatchType.ENUM))
+        advField.label = fieldKey
+        advField.fieldSettings = {listValues : typesObj[fieldTypeValue].values}
+      }
+      if (isList)advField.mode = 'ARRAY'
+      advField.typevalue = fieldTypeValue
+      return advField
+    }catch(err:any){
+      console.log("advSearchFilterFormatter",fieldKey,fieldTypeValue)
+      throw err
     }
-    if (isList)advField.mode = 'ARRAY'
-    advField.typevalue = fieldTypeValue
-    return advField
   }
 
   
@@ -313,7 +325,7 @@ class GraphqlTableConfig {
     typesObjKeys.forEach(key => {
       const itemObj = typesObj[key]
       if (itemObj &&  itemObj.type === 'OBJECT') {
-        const fieldsKeys:string[] = itemObj.order_by || Object.keys(itemObj.fields || {})
+        const fieldsKeys:string[] = itemObj.order_by || Object.keys(itemObj.fields || [])
   
         const fieldKeysArr:FieldKeysItem[] = [{
           Header: 'ID',
@@ -355,7 +367,8 @@ class GraphqlTableConfig {
                     accessor: fieldKey,
                     filter: { type: 'list', options: { dataprovider: fieldTypeValueObj.values, ...isList } }
                   })
-                } else {
+                } 
+              }else {
                   const filter = this.getFilterType(fieldTypeValue)
                   const columnObj:FieldKeysItem= {
                     Header: fieldKey.toUpperCase(),
@@ -368,16 +381,13 @@ class GraphqlTableConfig {
                     columnObj.disableSortBy = true
                   }
                   fieldKeysArr.push(columnObj)
-                }
-              }
+              } 
             }
           })// foreach
           tablesColumnsConfig[key] = fieldKeysArr
         //}
      }
     })
-  
-    
   
     typesObjKeys.forEach(key => {
       const itemObj = typesObj[key]

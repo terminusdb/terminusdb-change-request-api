@@ -6,12 +6,12 @@ import GraphqlTableConfig from "../../../../../../../../core/GraphqlTableConfig"
 export const GET: Operation = async(req:Request, res:Response) =>{
     try{
         const connector = new GraphqlTableConfig(req)
-        const tableConfig = await connector.getSchema(req.params.org, req.params.db, req.params.branch)
+        const tableConfig = await connector.getSchema(req.params.org, req.params.db, req.params.type, req.params.typeid)
         res.json(tableConfig)
     }catch(err:any){
           console.log(err.message)
           const status = err.status || 500
-          const errData = err.data  || {message: "I can not get the change requests list"}
+          const errData = err.data  || {message: "I can not return the tables configuration"}
           res.status(status).send(errData);
     }
 }
@@ -34,7 +34,13 @@ GET.apiDoc = {
         },
         {
           in: "path",
-          name: "branch",
+          name: "type",
+          required: true,
+          type: "string"
+        },
+        {
+          in: "path",
+          name: "typeid",
           required: true,
           type: "string"
         },
