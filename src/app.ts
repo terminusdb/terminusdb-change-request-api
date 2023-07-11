@@ -25,7 +25,7 @@ dotenv.config({ path: __dirname+'/../.env' });
 
 app.use('/:prefix/api',
   createProxyMiddleware({
-    target: process.env.SERVER_ENDPOINT,
+    target: process.env.SERVER_ENDPOINT || "http://localhost:6363",
     changeOrigin: false,
    // onProxyRes: onProxyRes,
     pathRewrite: {
