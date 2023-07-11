@@ -31,11 +31,9 @@ export function assignCommit (logger:any, domain:any, sourceCommit:any, targetCo
   return axios.get(`${baseUrl}assign`, config)
 }
 
-export function searchIndex (req:Request, apikey?:string) {
+export function searchIndex (req:Request, domain:string, commit:string, apikey?:string) {
   if(!apikey) throw new Error("Plase set a valid OpenAI api key")
   const headers = { VECTORLINK_EMBEDDING_API_KEY: apikey, 'Content-Type': 'text/plain' }
-  const domain = req.query.domain
-  const commit = req.query.commit
   const config = { headers, params: { commit: commit, domain: domain } }
   return axios.post(`${baseUrl}search`, req.body.search, config)
 }

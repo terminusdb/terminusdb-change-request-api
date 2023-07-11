@@ -5,10 +5,13 @@ import ChangeRequestDB from "../../../../../core/ChangeRequestDB";
     export const GET: Operation = async(req:Request, res:Response) =>{
       try{
         const changeR = new ChangeRequestDB(req)
+        // check if the user has read access
+        await changeR.checkUserReadAuthorization()
         const limitPar:string = typeof req.query.limit  === "string" ? req.query.limit : '5'
         const limit:number = parseInt(limitPar)
         const status = typeof req.query.status === "string" ? req.query.status : undefined
-        const commits = await changeR.getLastCommitsIndexed(limit, status)
+        const branch = typeof req.query.branch === "string" ? req.query.branch : undefined
+        const commits = await changeR.getLastCommitsIndexed(limit, status, branch)
         res.status(200).json(commits)
       }catch(err:any){
           console.log(err.message)
@@ -46,7 +49,13 @@ import ChangeRequestDB from "../../../../../core/ChangeRequestDB";
           name: "status",
           required: false,
           type: "string"
-        }
+        },
+        {
+          in: "query",
+          name: "branch",
+          required: false,
+          type: "string"
+        },
       ],
       responses: {
         200: {

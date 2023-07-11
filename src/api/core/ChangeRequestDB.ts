@@ -343,6 +343,12 @@ class ChangeRequestDB {
     return userDatabase.getVersionDiff(originalBranch, trackingBranch, undefined,options)
   }
 
+  checkUserReadAuthorization () {
+    const tmpClient = this.connectWithCurrentUser()
+    const query = TerminusClient.WOQL.limit(1).triple('v:a', 'v:b', 'v:c')
+    return tmpClient.query(query)
+  }
+
   async addMessage (changeIdHash:string, message:string) {
     const changeId = `ChangeRequest/${changeIdHash}`
     const requestDoc = await this.client.getDocument({ id: changeId })
@@ -456,14 +462,15 @@ class ChangeRequestDB {
     }
   }
 
- async getLastCommitsIndexed (limit = 1, status?:string) {
+ async getLastCommitsIndexed (limit = 1, status?:string, branch?:string) {
   try {
     const WOQL = TerminusClient.WOQL
     const statusVar = status && this.availableStatus[status] ? `@schema:Indexing_Status/${status}` : 'v:indexing_status'
+    const branchVar = branch ? WOQL.string(branch) : 'v:branch'
     const query = WOQL.limit(limit).order_by(['v:time', 'desc']).and(
       WOQL.triple('v:index', 'rdf:type', '@schema:Indexed_commit'),
       WOQL.triple('v:index', '@schema:change_request_commit_id', 'v:commit_id'),
-      WOQL.triple('v:index', '@schema:searchable_branch_name', 'v:branch'),
+      WOQL.triple('v:index', '@schema:searchable_branch_name', branchVar),
       WOQL.triple('v:index', '@schema:indexing_status', statusVar),
       WOQL.triple('v:index', '@schema:searchable_branch_commit_id', 'v:searchable_commit'),
       WOQL.triple('v:index', '@schema:indexed_at', 'v:time'),

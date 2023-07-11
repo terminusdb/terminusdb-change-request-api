@@ -27,7 +27,7 @@ import ChangeRequestDB from "../../../../../core/ChangeRequestDB";
         const message = req.body.message || "create a new change request"
         const changeR = new ChangeRequestDB(req)
         const crId= await changeR.createChangeRequest(message)
-        console.log(`About to create Change Request: ${JSON.stringify(req.body)}`);
+        //console.log(`About to create Change Request: ${JSON.stringify(req.body)}`);
         res.status(201).send({message:"the change request as been created",...crId});
       }catch(err:any){
           console.log(err.message)

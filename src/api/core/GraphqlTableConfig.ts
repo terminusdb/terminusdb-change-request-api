@@ -219,7 +219,7 @@ class GraphqlTableConfig {
     const result = await client.query({ query })
     const schemaDoc = await woqlClient.getDocument({ graph_type: 'schema', as_list: true })
     const tableConfig = this.formatSchema(result, schemaDoc)
-    this.logger.debug(JSON.stringify(tableConfig, null, 4))
+    //this.logger.debug(JSON.stringify(tableConfig, null, 4))
     return tableConfig
   }
 
