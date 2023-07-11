@@ -14,7 +14,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const endpoint = process.env.SERVER_ENDPOINT || ""
 const key = process.env.USER_KEY || ""
-const CROrg = process.env.CR_TEARM_NAME || ""
+const CROrg = process.env.CR_TEAM_NAME || ""
 const user = process.env.USER_NAME || ""
 
 
