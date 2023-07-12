@@ -1,10 +1,8 @@
-import TerminusClient , {WOQLClient,WOQL} from "@terminusdb/terminusdb-client"
+import TerminusClient , {WOQLClient,WOQL, AccessControl} from "@terminusdb/terminusdb-client"
 import { DbDetails, DocParamsGet, DocParamsPut,DiffObject } from "@terminusdb/terminusdb-client/dist/typescript/lib/typedef"
 import { Request } from "express"
 import * as typeDef from "./typeDef"
 import {ApiError} from "./ApiError"
-const server : string = process.env.SERVER_ENDPOINT || "http://127.0.0.1:6363"
-
 import * as IndexClient from './IndexClient'
 
 import dbSchema from '../../change_request_schema.json'
@@ -12,10 +10,10 @@ import { doc } from "@terminusdb/terminusdb-client/dist/typescript/lib/woql"
 //import {v4 as uuidv4} from 'uuid';
 const { v4: uuidv4 } = require('uuid');
 
-const endpoint = process.env.SERVER_ENDPOINT || ""
-const key = process.env.USER_KEY || ""
-const CROrg = process.env.CR_TEARM_NAME || ""
-const user = process.env.USER_NAME || ""
+const endpoint :string = process.env.SERVER_ENDPOINT || "http://127.0.0.1:6363"
+const key = process.env.USER_KEY || "root"
+const CROrg = process.env.CR_TEAM_NAME || "terminusCR"
+const user = process.env.USER_NAME || "admin"
 
 
 const logger =  {
@@ -38,6 +36,7 @@ const logger =  {
 }
 class ChangeRequestDB {
   client: WOQLClient;
+  accessControl: AccessControl;
   request : Request
   user : string | undefined
   password : string | undefined
@@ -60,6 +59,7 @@ class ChangeRequestDB {
     this.logger =  logger//req.context.logger
     // every dataproduct has the related change_request database
     this.changeRequestDbName = `${TerminusClient.UTILS.encodeURISegment(this.orgName)}__${this.dbName}__CR`
+    this.accessControl = new AccessControl(endpoint, { key: key, user: user })
     this.client.db(this.changeRequestDbName)
   }
 
@@ -81,6 +81,14 @@ class ChangeRequestDB {
         return []
       }
       throw err
+    }
+  }
+
+  async createTeam(){
+    try{
+      await this.accessControl.createOrganization(CROrg)
+    }catch(err){
+      // the team already exists
     }
   }
 
