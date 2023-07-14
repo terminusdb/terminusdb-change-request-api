@@ -46,6 +46,7 @@ class ChangeRequestDB {
   logger : Object 
   endStatus:any = { Assigned: true, Error: true }
   availableStatus:any = { Assigned: true, Error: true, Progress: true }
+  errorMessage:any = {'api:UnknownDatabase':true,'api:NoUniqueIdForOrganizationName':true}
 
   constructor(req : Request) {
     this.request = req
@@ -67,6 +68,7 @@ class ChangeRequestDB {
 // maybe I can add a capability at database level
 // admin create the db
 // and add the capability
+  
   async getChangeRequests (changeId: String | false = false, as_list = true) {
     const params : DocParamsGet = { type: 'ChangeRequest', as_list: as_list}
       if (changeId) {
@@ -77,7 +79,8 @@ class ChangeRequestDB {
       return result
     } catch (err:any) {
       // if there is no change request we return an empty array
-      if (typeof err.data === 'object' && err.data['api:error'] && err.data['api:error']['@type'] === 'api:UnknownDatabase') {
+      if (typeof err.data === 'object' && err.data['api:error'] 
+          && this.errorMessage[err.data['api:error']['@type']]) {
         return []
       }
       throw err
@@ -87,8 +90,12 @@ class ChangeRequestDB {
   async createTeam(){
     try{
       await this.accessControl.createOrganization(CROrg)
-    }catch(err){
-      // the team already exists
+    }catch(err:any){
+      if (typeof err.data === 'object' && err.data['api:error'] 
+        && this.errorMessage[err.data['api:error']['@type']]) {
+        return // the team already exists
+      }
+      throw err
     }
   }
 
