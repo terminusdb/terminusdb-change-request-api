@@ -26,6 +26,7 @@ const logger:Logger =  {
 
 export const addContextMiddle = function (req:Request, res:Response, next:NextFunction) {
   var dd = new Date()   
+  //logger.info("addContextMiddle","test log")
   if(req.url.startsWith("/api-docs")){
       return next();
     }

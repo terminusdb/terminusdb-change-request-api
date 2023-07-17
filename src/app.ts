@@ -2,8 +2,6 @@
 import * as dotenv from 'dotenv'
 import express from "express";
 import path  from "path";
-import  cookieParser from "cookie-parser";
-import logger from "morgan";
 import  { initialize } from "express-openapi";
 import swaggerUi from "swagger-ui-express";
 import ApiDocs from "./api/api-doc.json"
@@ -11,7 +9,8 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import {addContextMiddle} from "./api/addContextMiddle"
 import { createProxyMiddleware } from  'http-proxy-middleware'
-import TerminusClient , {WOQLClient,WOQL, AccessControl} from "@terminusdb/terminusdb-client"
+import { AccessControl} from "@terminusdb/terminusdb-client"
+import * as settings from './api/core/settings'
 declare namespace Express {
   export interface Request {
     context?: object
@@ -69,13 +68,9 @@ app.use(addContextMiddle)
 app.listen(3035,function(){
   // when we start the server we check if the terminusCR team already exists
   // if it does not exists we'll create it
-  const endpoint :string = process.env.SERVER_ENDPOINT || "http://127.0.0.1:6363"
-  const key = process.env.USER_KEY || "root"
-  const CROrg = process.env.CR_TEAM_NAME || "terminusCR"
-  const user = process.env.USER_NAME || "admin"
-  const accessControl = new AccessControl(endpoint, { key: key, user: user })
+  const accessControl = new AccessControl(settings.endpoint, { key: settings.key, user: settings.user })
 
-  accessControl.createOrganization(CROrg).then(result=>{
+  accessControl.createOrganization(settings.CROrg).then(result=>{
       console.log("The Change Request team has been created")
     }).catch((err:any)=>{
       if (typeof err.data === 'object' && err.data['api:error'] 
