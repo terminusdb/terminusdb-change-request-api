@@ -4,46 +4,26 @@ import { Request } from "express"
 import * as typeDef from "./typeDef"
 import {ApiError} from "./ApiError"
 import * as IndexClient from './IndexClient'
+import * as settings from './settings'
 
 import dbSchema from '../../change_request_schema.json'
 import { doc } from "@terminusdb/terminusdb-client/dist/typescript/lib/woql"
 //import {v4 as uuidv4} from 'uuid';
 const { v4: uuidv4 } = require('uuid');
 
-const endpoint :string = process.env.SERVER_ENDPOINT || "http://127.0.0.1:6363"
-const key = process.env.USER_KEY || "root"
-const CROrg = process.env.CR_TEAM_NAME || "terminusCR"
-const user = process.env.USER_NAME || "admin"
-
-
-const logger =  {
-  error : function (message:string){
-     const dd = new Date()
-     console.log('ERROR', dd.toISOString(), message)
-  },
-  debug : function (message:string){
-    const dd = new Date()
-     console.log('DEBUG', dd.toISOString(), message)
-  },
-  info : function (message:string){
-    const dd = new Date()
-     console.log('INFO', dd.toISOString(), message)
-  },
-  warning : function (message:string){
-    const dd = new Date()
-     console.log('WARNING', dd.toISOString(), message)
-  }
-}
+//const endpoint :string = process.env.SERVER_ENDPOINT || "http://127.0.0.1:6363"
+//const key = process.env.USER_KEY || "root"
+//const CROrg = process.env.CR_TEAM_NAME || "terminusCR"
+//const user = process.env.USER_NAME || "admin"
 class ChangeRequestDB {
   client: WOQLClient;
-  accessControl: AccessControl;
   request : Request
   user : string | undefined
   password : string | undefined
   orgName : string | undefined
   dbName : string | undefined
   changeRequestDbName:  string | undefined
-  logger : Object 
+  logger : typeDef.Logger 
   endStatus:any = { Assigned: true, Error: true }
   availableStatus:any = { Assigned: true, Error: true, Progress: true }
   errorMessage:any = {'api:UnknownDatabase':true,'api:NoUniqueIdForOrganizationName':true}
@@ -53,14 +33,13 @@ class ChangeRequestDB {
     this.password = req.context.password
     this.user = req.context.user
     // user that has admin privileges for the terminuscms team
-    this.client = new TerminusClient.WOQLClient(endpoint, { key: key, user: user }) 
-    this.client.organization(CROrg)
+    this.client = new TerminusClient.WOQLClient(settings.endpoint, { key:settings.key, user: settings.user }) 
+    this.client.organization(settings.CROrg)
     this.orgName = req.params.org
     this.dbName = req.params.db
-    this.logger =  logger//req.context.logger
+    this.logger =  req.context.logger
     // every dataproduct has the related change_request database
     this.changeRequestDbName = `${TerminusClient.UTILS.encodeURISegment(this.orgName)}__${this.dbName}__CR`
-    this.accessControl = new AccessControl(endpoint, { key: key, user: user })
     this.client.db(this.changeRequestDbName)
   }
 
@@ -87,18 +66,6 @@ class ChangeRequestDB {
     }
   }
 
-  async createTeam(){
-    try{
-      await this.accessControl.createOrganization(CROrg)
-    }catch(err:any){
-      if (typeof err.data === 'object' && err.data['api:error'] 
-        && this.errorMessage[err.data['api:error']['@type']]) {
-        return // the team already exists
-      }
-      throw err
-    }
-  }
-
   async createCRDatabase(){
     try {
       if(this.changeRequestDbName){
@@ -113,7 +80,7 @@ class ChangeRequestDB {
     } catch (err:any) {
       
       // the database already exists
-      //this.logger.debug(`the change request db already exists ${err.message}`)
+      this.logger.debug(`the change request db already exists ${err.message}`)
     }
   }
 
@@ -169,7 +136,7 @@ class ChangeRequestDB {
   
   // I'm using the current user to connect with the database that is going to be modified
   connectWithCurrentUser () {
-    const tmpClient = new TerminusClient.WOQLClient(endpoint, { user: this.user, organization: this.orgName })
+    const tmpClient = new TerminusClient.WOQLClient(settings.endpoint, { user: this.user, organization: this.orgName })
     // I remove the basic authentication type header
     tmpClient.localAuth({ user: this.user, type: "basic", key: this.password || '' })
     tmpClient.db(this.dbName)

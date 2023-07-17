@@ -1,5 +1,6 @@
 
 export type ChangeReqStatus = "Submitted" | "Open" | "Rejected" | "Merged"
+export type Logger = {error:Function, debug:Function, info:Function, warn:Function}
 export type MessageObj =  {"@type" : "Message", 
             "text":string,
             "timestamp":number,
