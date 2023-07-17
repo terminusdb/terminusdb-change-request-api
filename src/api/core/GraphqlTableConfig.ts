@@ -2,7 +2,7 @@
 import { ApolloClient, InMemoryCache, gql, concat,HttpLink,ApolloLink } from '@apollo/client/core';
 import { Request } from "express"
 import  TerminusClient from '@terminusdb/terminusdb-client'
-import { AdvancedSearchField } from './typeDef'
+import { AdvancedSearchField,Logger } from './typeDef'
 const endpoint = process.env.SERVER_ENDPOINT || ""
 const key = process.env.USER_KEY || ""
 const user = process.env.USER_NAME || ""
@@ -137,25 +137,6 @@ const advancedSearchMatchType : Record<AdvancedKeyType,AdvancedSearchField> = {
   }
 }
 
-const logger =  {
-  error : function (message:string){
-     const dd = new Date()
-     console.log('ERROR', dd.toISOString(), message)
-  },
-  debug : function (message:string){
-    const dd = new Date()
-     console.log('DEBUG', dd.toISOString(), message)
-  },
-  info : function (message:string){
-    const dd = new Date()
-     console.log('INFO', dd.toISOString(), message)
-  },
-  warning : function (message:string){
-    const dd = new Date()
-     console.log('WARNING', dd.toISOString(), message)
-  }
-}
-
 const query = gql(`{__schema
   { types{...FullType}
   directives{name description locations args{...InputValue}}}}
@@ -173,7 +154,7 @@ class GraphqlTableConfig {
   password : string | undefined
   orgName : string | undefined
   dbName : string | undefined
-  logger : typeof logger 
+  logger : Logger
 
   constructor(req : Request) {
     this.request = req
@@ -182,7 +163,7 @@ class GraphqlTableConfig {
     // user that has admin privileges for the terminuscms team
     this.orgName = req.params.org
     this.dbName = req.params.db
-    this.logger =  logger//req.context.logger
+    this.logger = req.context.logger
     // every dataproduct has the related change_request database
   }
 
@@ -219,7 +200,6 @@ class GraphqlTableConfig {
     const result = await client.query({ query })
     const schemaDoc = await woqlClient.getDocument({ graph_type: 'schema', as_list: true })
     const tableConfig = this.formatSchema(result, schemaDoc)
-    //this.logger.debug(JSON.stringify(tableConfig, null, 4))
     return tableConfig
   }
 
@@ -243,10 +223,6 @@ class GraphqlTableConfig {
 
   advSearchFilterFormatter (typesObj:any, fieldKey:string, fieldTypeValue:AdvancedKeyType, isList:boolean) {
     try{
-      if(fieldKey==="homeworld"){
-        console.log("stop")
-
-      }
       let advField:AdvancedSearchField = advancedSearchMatchType[fieldTypeValue] || {}
       if (advField !== undefined) {
         advField = JSON.parse(JSON.stringify(advField))
@@ -260,7 +236,7 @@ class GraphqlTableConfig {
       advField.typevalue = fieldTypeValue
       return advField
     }catch(err:any){
-      console.log("advSearchFilterFormatter",fieldKey,fieldTypeValue)
+      this.logger.error("advSearchFilterFormatter",fieldKey,fieldTypeValue)
       throw err
     }
   }
@@ -282,7 +258,6 @@ class GraphqlTableConfig {
 
  formatSchema(result:any, schemaDoc:any) {
     const types: GraphQLSchemaType[] = result.data.__schema.types
-    //console.log(types)
     const typesObj01:any = types[0]
     const name = typesObj01.name
     const typesObj:ObjectMap = {}
@@ -291,7 +266,6 @@ class GraphqlTableConfig {
       const itemMatch = schemaDoc.find((doc:any) => doc['@id'] === name ||
                           `${doc['@id']}_Filter` === name || `${doc['@id']}_Ordering` === name)
       if (itemMatch) {
-        console.log("TYPE NAME",name , kind)
         const ordering = itemMatch['@metadata'] && itemMatch['@metadata'].order_by ? { order_by: itemMatch['@metadata'].order_by } : {}
         typesObj[name] = { type: kind, ...ordering }
         // to be review
@@ -481,7 +455,7 @@ class GraphqlTableConfig {
         objQuery[key] = {
           query: `
               query ${key}Query($offset: Int, $limit: Int ${filter} ${order} ){
-                ${key}(offset: $offset, limit: $limit ${filterVar} ${orderVar}){
+                ${key}(include_children:false, offset: $offset, limit: $limit ${filterVar} ${orderVar}){
                   _id
                   ${fieldKeysArr.join(' \n ')}
                 }
