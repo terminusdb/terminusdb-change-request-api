@@ -65,20 +65,22 @@ app.use(
 );
 
 app.use(addContextMiddle)
-app.listen(3035,function(){
+app.listen(3035,  async () => {
   // when we start the server we check if the terminusCR team already exists
   // if it does not exists we'll create it
-  const accessControl = new AccessControl(settings.endpoint, { key: settings.key, user: settings.user })
+  try{
+    const accessControl = new AccessControl(settings.endpoint, { key: settings.key, user: settings.user })
 
-  accessControl.createOrganization(settings.CROrg).then(result=>{
-      console.log("The Change Request team has been created")
-    }).catch((err:any)=>{
+    await accessControl.createOrganization(settings.CROrg)
+    await accessControl.manageCapability('User/admin',`Organization/${settings.CROrg}`,['Role/admin'],"grant")
+    console.log("The Change Request team has been created")
+  }catch(err:any){
       if (typeof err.data === 'object' && err.data['api:error'] 
         && err.data['api:error']['@type'] === "api:NoUniqueIdForOrganizationName") {
         console.log("The Change Request team already exists")
         }
-      })
-  });
+  }
+})
 
 console.log("App running on port http://localhost:3035");
 console.log(

@@ -92,7 +92,7 @@ class ChangeRequestDB {
       let docId
       const creator = this.user || ""
       const originalBranch = this.request.body.original_branch
-      this.createCRDatabase()
+      await this.createCRDatabase()
       const tmpClient = this.connectWithCurrentUser()
 
       // I need to record the commit-id point
