@@ -370,7 +370,8 @@ class ChangeRequestDB {
         return { status: 'Assigned' }
       } else {
         //this.logger.error(`I can not assign the indexing commit ${commit} to ${originalBranchLastCommit}`)
-        return { status: 'Error', error_message: err.message }
+        const message = err.response && err.response.data ? err.response.data : err.message
+        return { status: 'Error', error_message: message }
       }
     }
   }
