@@ -369,7 +369,7 @@ class GraphqlTableConfig {
       if (itemObj && itemObj.type === 'OBJECT') {
         const fieldsKeys = Object.keys(itemObj.fields || {}) 
         const fieldKeysArr: string[] = []
-        const fieldKeysArrOpenAI = []
+        const fieldKeysArrOpenAI: string[] = []
         if (!advancedSearchObj[key]) {
           advancedSearchObj[key] = {}
         }
@@ -406,8 +406,8 @@ class GraphqlTableConfig {
                 tmpSubfield.push('_id')
               }
               fieldKeysArrOpenAI.push(`${fieldKey}{
-                                        ${tmpSubfield.join(' \n ')
-                                    }`)
+                                        ${tmpSubfield.join(' \n ')}
+                                      }`)
               // this could be a list too
               const advField = JSON.parse(JSON.stringify(advancedSearchMatchType.OBJECT))
               advField.label = fieldKey
@@ -447,7 +447,7 @@ class GraphqlTableConfig {
           query: `
               query($id: ID){
                 ${key}(id: $id){
-                  ${fieldKeysArr.join(' \n ')}
+                  ${fieldKeysArrOpenAI.join(' \n ')}
                 }
               }`
         }
