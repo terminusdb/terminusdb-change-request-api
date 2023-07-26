@@ -8,8 +8,7 @@ import * as settings from './settings'
 
 import dbSchema from '../../change_request_schema.json'
 import { doc } from "@terminusdb/terminusdb-client/dist/typescript/lib/woql"
-//import {v4 as uuidv4} from 'uuid';
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('node:crypto');
 
 //const endpoint :string = process.env.SERVER_ENDPOINT || "http://127.0.0.1:6363"
 //const key = process.env.USER_KEY || "root"
@@ -108,7 +107,7 @@ class ChangeRequestDB {
         original_branch: originalBranch,
         creator: creator,
         // we autogenerate the branchName
-        tracking_branch : uuidv4(),
+        tracking_branch : crypto.randomUUID(),
         origin_commit_id : lastStartBranchCommitID,
         creator_email: this.request.body.author || creator,
         creation_time: timestamp,
