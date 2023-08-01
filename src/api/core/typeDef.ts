@@ -1,5 +1,5 @@
 
-export type ChangeReqStatus = "Submitted" | "Open" | "Rejected" | "Merged"
+export type ChangeReqStatus = "Submitted" | "Open" | "Rejected" | "Merged" | "Close"
 export type Logger = {error:Function, debug:Function, info:Function, warn:Function}
 export type MessageObj =  {"@type" : "Message", 
             "text":string,
@@ -42,6 +42,7 @@ export type IndexedCommit={
     "searchable_branch_name"?:string,
     "task_id"?:string,
     "error_message"?:string
+    "indexed_documents"?:number
 }
 
 export type AdvancedSearchField = {

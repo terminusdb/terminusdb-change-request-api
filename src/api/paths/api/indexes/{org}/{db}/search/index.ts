@@ -14,8 +14,10 @@ import ChangeRequestDB from "../../../../../../core/ChangeRequestDB";
         res.json(result.data)
       } catch (err:any) {
         //req.context.logger.error(err)
+        
         const status = err.status || 500
-        res.status(status).send({ message: 'Failed to search', err: err.message })
+        const message = err.response && err.response.data ? err.response.data : err.message
+        res.status(status).send({ message: 'Failed to search', error: message })
       }
     }
     

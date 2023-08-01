@@ -7,8 +7,7 @@ import ChangeRequestDB from "../../../../../core/ChangeRequestDB";
         const changeR = new ChangeRequestDB(req)
         // check if the user has read access
         await changeR.checkUserReadAuthorization()
-        const limitPar:string = typeof req.query.limit  === "string" ? req.query.limit : '5'
-        const limit:number = parseInt(limitPar)
+        const limit:number = typeof req.query.limit  === "string" || typeof req.query.limit  === "number" ? parseInt(req.query.limit) : 5
         const status = typeof req.query.status === "string" ? req.query.status : undefined
         const branch = typeof req.query.branch === "string" ? req.query.branch : undefined
         const commits = await changeR.getLastCommitsIndexed(limit, status, branch)
@@ -16,7 +15,7 @@ import ChangeRequestDB from "../../../../../core/ChangeRequestDB";
       }catch(err:any){
           console.log(err.message)
           const status = err.status || 500
-          const errData = err.data  || {message: "I can not get commit indexed list"}
+          const errData = err.data  || {message: `I can not get commit indexed list ${err.message}`}
           res.status(status).send(errData);
       }
     }

@@ -13,7 +13,8 @@
             "Sent",
             "Progress",
             "Assigned",
-            "Create"
+            "Create",
+            "Close"
           ]
     },
     {
@@ -91,6 +92,10 @@
         "error_message": {
             "@class": "xsd:string",
             "@type": "Optional"
+        },
+        "indexed_documents": {
+            "@class": "xsd:decimal",
+            "@type": "Optional"
         }
     },
     {
@@ -100,7 +105,8 @@
             "Open",
             "Merged",
             "Rejected",
-            "Submitted"
+            "Submitted",
+            "Close"
         ]
     }
 ]

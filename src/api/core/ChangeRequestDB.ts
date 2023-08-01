@@ -10,11 +10,6 @@ import dbSchema from '../../change_request_schema.json'
 import { doc } from "@terminusdb/terminusdb-client/dist/typescript/lib/woql"
 //import {v4 as uuidv4} from 'uuid';
 const { v4: uuidv4 } = require('uuid');
-
-//const endpoint :string = process.env.SERVER_ENDPOINT || "http://127.0.0.1:6363"
-//const key = process.env.USER_KEY || "root"
-//const CROrg = process.env.CR_TEAM_NAME || "terminusCR"
-//const user = process.env.USER_NAME || "admin"
 class ChangeRequestDB {
   client: WOQLClient;
   request : Request
@@ -24,8 +19,8 @@ class ChangeRequestDB {
   dbName : string | undefined
   changeRequestDbName:  string | undefined
   logger : typeDef.Logger 
-  endStatus:any = { Assigned: true, Error: true }
-  availableStatus:any = { Assigned: true, Error: true, Progress: true }
+  endStatus:any = { Assigned: true, Error: true, Close: true }
+  availableStatus:any = { Assigned: true, Error: true, Progress: true, Close: true }
   errorMessage:any = {'api:UnknownDatabase':true,'api:NoUniqueIdForOrganizationName':true}
 
   constructor(req : Request) {
@@ -221,22 +216,21 @@ class ChangeRequestDB {
   
   // check if there is an old CR db
   async updateDocumentFixSchema(changeRequestDoc:typeDef.ChangeReqDoc|typeDef.IndexedCommit, message = 'add new doc') {
-    let docResult
     try {
       const putDocParams : DocParamsPut = { create: true }
-      docResult = await this.client.updateDocument(changeRequestDoc, { create: true }, undefined, message)
+      await this.client.updateDocument(changeRequestDoc, { create: true }, undefined, message)
     } catch (err:any) {
       const errData = err.data || {}
       // I have the old schema
       if (errData['api:message'] === 'Schema check failure') {
         // update old schema
         await this.client.addDocument(dbSchema, { graph_type: 'schema', full_replace: true })
-        docResult = await this.client.updateDocument(changeRequestDoc, { create: true }, undefined, message)
+        await this.client.updateDocument(changeRequestDoc, { create: true }, undefined, message)
       } else {
         throw err
       }
     }
-    return docResult
+    return changeRequestDoc
   }
   
   async getCROriginCommitId (userDBClient:WOQLClient, originBranch:string, trackingBranch:string) {
@@ -379,10 +373,11 @@ class ChangeRequestDB {
   async checkStatus(taskId:string){
     try {
       const progress = await IndexClient.checkStatus(this.logger, taskId)
-      if (progress.data < 1) {
-        return { status: 'Progress' }
+      if (progress.status === "Complete") {
+        const indexedDocuments = progress.indexed_documents || 0
+        return { status: 'Complete',indexed_documents:indexedDocuments }
       }
-      return { status: 'Complete' }
+      return { status: 'Progress' }
     } catch (err:any) {
       const message = err.response && err.response.data ? err.response.data : err.message
       return { status: 'Error', error_message: message }
@@ -402,11 +397,12 @@ class ChangeRequestDB {
         await this.client.updateDocument(doc)
         break
       case 'Complete':
+        doc.indexed_documents = statusObj.indexed_documents
         // eslint-disable-next-line no-case-declarations
         const result = await this.assignCommit(domain, commit, doc.searchable_branch_commit_id, apiKey)
         doc.indexing_status = result.status
         if (result.error_message)doc.error_message = result.error_message
-        await this.client.updateDocument(doc)
+        await this.updateDocumentFixSchema(doc)
         break
       case 'Error':
         doc.indexing_status = 'Error'
@@ -459,6 +455,7 @@ class ChangeRequestDB {
       WOQL.triple('v:index', '@schema:indexed_at', 'v:time'),
       WOQL.opt().triple('v:index', '@schema:task_id', 'v:task_id'),
       WOQL.opt().triple('v:index', '@schema:error_message', 'v:error_message'),
+      WOQL.opt().triple('v:index', '@schema:indexed_documents', 'v:indexed_documents'),
       WOQL.triple('v:changeR', '@schema:indexing_info', 'v:index'),
       WOQL.triple('v:changeR', '@schema:name', 'v:name'),
       WOQL.triple('v:changeR', '@schema:tracking_branch', 'v:tracking_branch')

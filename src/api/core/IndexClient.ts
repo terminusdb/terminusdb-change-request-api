@@ -15,9 +15,10 @@ export async function indexDatabase (logger:any, domain:string, commit:string, a
   return axios.get(`${baseUrl}index`, { headers, params: { commit: commit, domain: domain } })
 }
 
-export function checkStatus (logger:any, taskId:string) {
+ export async function checkStatus (logger:any, taskId:string) {
   logger.info(`check status ${taskId}`)
-  return axios.get(`${baseUrl}check`, { params: { task_id: taskId } })
+  const res =  await axios.get(`${baseUrl}check`, { params: { task_id: taskId } })
+  return typeof res.data === "string" ? JSON.parse(res.data) : res.data
 }
 
 // -- source_commit: commit that you already built an index for
