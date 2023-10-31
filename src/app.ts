@@ -18,7 +18,7 @@ declare namespace Express {
 
 var app = express();
 app.use(cors());
-function not_in_whitelist(s: string, _req: unknown) {
+function not_in_whitelist(s: string, _req: unknown): boolean {
   const whitelist = [
     /^\/api\/indexes/,
     /^\/api\/changes/,
@@ -26,7 +26,7 @@ function not_in_whitelist(s: string, _req: unknown) {
     /^\/api\/organizations\/[^/]+\/openaikey$/,
   ];
   const result = whitelist.some((re) => {
-    s.match(re);
+    return s.match(re);
   });
 
   return !result;
