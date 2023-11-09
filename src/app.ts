@@ -94,12 +94,20 @@ app.listen(3035, async () => {
     );
     console.log("The Change Request team has been created");
   } catch (err: any) {
-    if (
+    if (err.data === undefined) {
+      // terminusdb has not yet started up. exit.
+      console.error("TerminusDB not yet initialized");
+      process.exit(1);
+    } else if (
       typeof err.data === "object" &&
       err.data["api:error"] &&
       err.data["api:error"]["@type"] === "api:NoUniqueIdForOrganizationName"
     ) {
       console.log("The Change Request team already exists");
+    } else {
+      console.log("An unexpected error occured during startup");
+      console.log(err);
+      process.exit(1);
     }
   }
 });
